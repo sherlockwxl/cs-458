@@ -1,0 +1,3 @@
+scp  ~/uml/share/submit.c  x242wu@linux.student.cs.uwaterloo.ca:~/cs458/A1/
+
+cp /usr/local/src/submit.c /share/submit.c
