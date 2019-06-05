@@ -439,7 +439,8 @@ int main(int argc, char* argv[]) {
 	if (!unsafe && check_forbidden(args.path)) {
 		unsafe = 1;
 		strcpy(status_msg+strlen(status_msg), "Forbidden name: ");
-		strncpy(status_msg+strlen(status_msg), args.path, sizeof(status_msg)-strlen(status_msg));
+		//strncpy(status_msg+strlen(status_msg), args.path, sizeof(status_msg)-strlen(status_msg));
+		strncat(status_msg+strlen(status_msg), args.path, sizeof(status_msg)-strlen(status_msg));
 		status_msg[sizeof(status_msg)-1] = '\0';
 	}
 
