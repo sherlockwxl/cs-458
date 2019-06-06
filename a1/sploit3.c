@@ -1,6 +1,6 @@
 /*
- * sploit1.c
- * buffer overflow version, attack the check_for_viruses function
+ * sploit3.c
+ * overwrite mkdir with /bin/sh
  */
 
 #include <stdio.h>
