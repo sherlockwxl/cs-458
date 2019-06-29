@@ -1,0 +1,13 @@
+Use prepared statement:
+
+Steps:
+1. create statement template which contains parameters that should be user input
+2. DBMS compiles the statement template
+3. when user input is givn, the DBMS will execute the statement with the input.
+
+Since the statemnet is pre-cimpiled, the input will be treated as parameter instead of command. So even if 
+user input contains SQL commands, it will not be executed.
+
+Please note, we need to use the user input as parameter instead of concating user input as a string. otherwise
+SQL injections are still possible.
+
