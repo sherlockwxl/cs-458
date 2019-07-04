@@ -1,0 +1,4 @@
+Approachs to address CSRF vulnerability:
+1. Check http referer, make sure the request came from correct url.
+2. Add a random token (not in cookie) along with each http request and save it into session.
+3. Add a customized csrftoken check in HTTP header.

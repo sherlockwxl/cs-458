@@ -1,0 +1,6 @@
+Since database already contains malicious code and we cant modify that, we need to change the way that html being generated.
+By using HTML eascping. 
+There are some characters that are commonly used in JS malicious code eg: (& < > " ' / ;). If we could escape those characters, the js code
+wont be able to be executed. We may want to do HTML eascping in all sections that we dont want any JS code to execued eg. comment, post and etc.
+And we may also want to check for extra js code hidden in <a>/ <href> tags and linsteners. For link, we may do a whitelist or just disable all 
+encoded string.
